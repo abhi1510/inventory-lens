@@ -1,0 +1,13 @@
+[project]
+name = "str"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "kafka-lib",
+    "requests>=2.34.2",
+]
+
+[tool.uv.sources]
+kafka-lib = { path = "../kafka_lib" }

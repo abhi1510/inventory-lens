@@ -1,0 +1,113 @@
+services:
+
+  postgres:
+    image: debezium/postgres:15
+    container_name: ilens-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ilens-db
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: ilens-kafka
+    ports:
+      - "9092:9092"    
+    environment:
+      CLUSTER_ID: HqzupjBFQPm7HQMvnJpFSA
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
+      KAFKA_LOG_DIRS: /tmp/ilens/kraft-combined-logs
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+    healthcheck:
+      test: ["CMD", "bash", "-c", "nc -z localhost 9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  kafka-init:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: ilens-kafka-init
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    volumes:
+    - ./kafka_lib/init.sh:/init.sh
+    entrypoint: ["bash", "/init.sh"]
+    restart: "no"
+
+  maildev:
+    image: maildev/maildev
+    container_name: ilens-maildev
+    ports:
+      - "1080:1080"   # UI
+      - "1025:1025"   # SMTP
+
+  app:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    container_name: ilens-app
+    ports:
+      - "8000:8000"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      TOPIC: inventory-events
+      DB_URI: postgresql+psycopg2://postgres:postgres@postgres:5432/ilens-db
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+  
+  notification:
+    build:
+      context: .
+      dockerfile: notifications/Dockerfile
+    container_name: ilens-notifications
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      TOPIC: inventory-events
+      GROUP_ID: notification-processor
+      SMTP_HOST: maildev
+      SMTP_PORT: 1025
+      FROM_EMAIL: notification@ilens.com
+    depends_on:
+      kafka:
+        condition: service_healthy
+      maildev:
+        condition: service_started
+
+  # str:
+  #   build:
+  #     context: .
+  #     dockerfile: str/Dockerfile
+  #   container_name: ilens-str
+  #   environment:
+  #     KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  #     TOPIC: inventory-events
+  #     GROUP_ID: str-processor
+  #     BASE_URL: "http://app:8000"
+  #   depends_on:
+  #     app:
+  #       condition: service_started

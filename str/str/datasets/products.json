@@ -1,0 +1,10 @@
+[
+    {"product_id": "P1001", "product_name": "Apple iPhone 15"},
+    {"product_id": "P1002", "product_name": "Samsung Galaxy S24"},
+    {"product_id": "P1003", "product_name": "Sony WH-1000XM5 Headphones"},
+    {"product_id": "P1004", "product_name": "Dell XPS 13 Laptop"},
+    {"product_id": "P1005", "product_name": "Logitech MX Master 3S Mouse"},
+    {"product_id": "P1006", "product_name": "Amazon Echo Dot"},
+    {"product_id": "P1007", "product_name": "Nintendo Switch OLED"},
+    {"product_id": "P1008", "product_name": "Apple Watch Series 9"}
+]

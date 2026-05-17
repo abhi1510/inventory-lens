@@ -1,0 +1,11 @@
+[project]
+name = "notifications"
+version = "0.1.0"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "kafka-lib",
+]
+
+[tool.uv.sources]
+kafka-lib = { path = "../kafka_lib" }
